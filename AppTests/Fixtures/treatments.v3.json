@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "identifier": "60ede2a4c574da0004a38600",
+      "eventType": "Meal Bolus",
+      "date": 1525383610088,
+      "insulin": 2.5,
+      "carbs": 30,
+      "enteredBy": "AndroidAPS",
+      "notes": "",
+      "srvModified": 1525383610200
+    },
+    {
+      "identifier": "60ede2a4c574da0004a38601",
+      "eventType": "Temporary Target",
+      "date": 1525383000000,
+      "duration": 60,
+      "targetBottom": 90,
+      "targetTop": 90,
+      "units": "mg/dl",
+      "reason": "Eating Soon",
+      "enteredBy": "AndroidAPS",
+      "srvModified": 1525383000200
+    },
+    {
+      "identifier": "60ede2a4c574da0004a38602",
+      "eventType": "Carb Correction",
+      "date": 1525382000000,
+      "carbs": 15,
+      "enteredBy": "AAPSClient-iOS",
+      "srvModified": 1525382000200
+    }
+  ]
+}

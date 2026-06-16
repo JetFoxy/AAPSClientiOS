@@ -1,0 +1,18 @@
+# Xcode / Swift
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.moved-aside
+.DS_Store
+
+# xcodegen generates the project from project.yml — regenerate with `xcodegen generate`
+*.xcodeproj
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# Misc
+*.log

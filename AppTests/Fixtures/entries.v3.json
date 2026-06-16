@@ -1,0 +1,27 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "type": "sgv",
+      "sgv": 120,
+      "date": 1525383610088,
+      "dateString": "2018-05-03T21:40:10.088Z",
+      "direction": "Flat",
+      "device": "xDrip-DexcomG6",
+      "units": "mg/dl",
+      "identifier": "60ede2a4c574da0004a3869d",
+      "srvModified": 1525383610200
+    },
+    {
+      "type": "sgv",
+      "sgv": 124,
+      "date": 1525383310088,
+      "dateString": "2018-05-03T21:35:10.088Z",
+      "direction": "FortyFiveUp",
+      "device": "xDrip-DexcomG6",
+      "units": "mg/dl",
+      "identifier": "60ede2a4c574da0004a3869c",
+      "srvModified": 1525383310200
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+name: AAPSClientiOS
+options:
+  bundleIdPrefix: org.diy
+  deploymentTarget:
+    iOS: "16.0"
+  generateEmptyDirectories: true
+settings:
+  SWIFT_VERSION: "5.9"
+  DEVELOPMENT_TEAM: CXP6AJRN62
+  CODE_SIGN_STYLE: Automatic
+targets:
+  AAPSClientiOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.diy.aapsclient
+      GENERATE_INFOPLIST_FILE: YES
+      SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+      MARKETING_VERSION: "1.0"
+      CURRENT_PROJECT_VERSION: "1"
+      DEVELOPMENT_TEAM: CXP6AJRN62
+      CODE_SIGN_STYLE: Automatic
+    info:
+      path: App/Info.plist
+      properties:
+        BGTaskSchedulerPermittedIdentifiers: ["org.diy.aapsclient.refresh"]
+        UIBackgroundModes: ["fetch"]
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    dependencies: []
+  AAPSClientiOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      PRODUCT_BUNDLE_IDENTIFIER: org.diy.aapsclient.tests
+    dependencies:
+      - target: AAPSClientiOS

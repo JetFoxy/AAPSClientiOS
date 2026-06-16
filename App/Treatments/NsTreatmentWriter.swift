@@ -1,0 +1,9 @@
+import Foundation
+
+protocol NsTreatmentWriter {
+    func sendCarbs(grams: Double, at date: Date) async throws
+    func sendTempTarget(targetMgdl: Int, durationMin: Int, reason: TtReason) async throws
+    func cancelTempTarget() async throws
+    func switchProfile(name: String, percentage: Int, durationMin: Int, profileJson: String?) async throws
+    func logEvent(eventType: String, at: Date, notes: String?, glucoseMgdl: Int?, durationMin: Int?) async throws
+}

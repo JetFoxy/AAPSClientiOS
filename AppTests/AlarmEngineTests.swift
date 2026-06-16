@@ -1,0 +1,83 @@
+import XCTest
+@testable import AAPSClientiOS
+
+final class AlarmEngineTests: XCTestCase {
+
+    private let thresholds = AlarmThresholds(
+        urgentLow: 55, low: 70, high: 180, urgentHigh: 250, staleMinutes: 15
+    )
+
+    func test_urgentLowFires() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 50, trend: .singleDown)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .urgentLow)
+    }
+
+    func test_lowFires() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 65, trend: .flat)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .low)
+    }
+
+    func test_highFires() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 200, trend: .flat)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .high)
+    }
+
+    func test_urgentHighFires() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 260, trend: .singleUp)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .urgentHigh)
+    }
+
+    func test_inRangeReturnsNil() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 120, trend: .flat)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertNil(result)
+    }
+
+    func test_noDataWhenStale() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 120, trend: .flat)
+        let staleUpdate = Date().addingTimeInterval(-20 * 60)
+        let result = engine.evaluate(latest: reading, lastUpdate: staleUpdate, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .noData)
+    }
+
+    func test_noDataWhenNilReading() {
+        let engine = AlarmEngineLive()
+        let result = engine.evaluate(latest: nil, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .noData)
+    }
+
+    func test_urgentOverridesNormal() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 50, trend: .doubleDown)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .urgentLow)
+    }
+
+    func test_snoozedTypeSuppressed() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 50, trend: .flat)
+        let futureDate = Date().addingTimeInterval(600)
+        engine.snooze(.urgentLow, until: futureDate)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertNil(result)
+    }
+
+    func test_snoozedExpiredFiresAgain() {
+        let engine = AlarmEngineLive()
+        let reading = GlucoseReading(date: .now, mgdl: 50, trend: .flat)
+        let pastDate = Date().addingTimeInterval(-600)
+        engine.snooze(.urgentLow, until: pastDate)
+        let result = engine.evaluate(latest: reading, lastUpdate: .now, now: .now, thresholds: thresholds)
+        XCTAssertEqual(result, .urgentLow)
+    }
+}

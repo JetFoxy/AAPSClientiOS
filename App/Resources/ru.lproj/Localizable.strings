@@ -1,0 +1,53 @@
+"app.title" = "AAPSClient";
+"home.no_data" = "--";
+"home.offline" = "НЕТ СВЯЗИ";
+"home.iob" = "IOB: %@ Ед";
+"home.cob" = "COB: %@ г";
+"home.eventual_bg" = "прогноз ГК: %@";
+"home.temp_basal" = "врем. базал: %@ Ед/ч";
+"home.carbs" = "Углеводы";
+"home.target" = "Цель";
+"home.add_carbs" = "Добавить углеводы";
+"home.temp_target" = "Временная цель";
+"home.carbs_sent" = "Углеводы отправлены";
+"home.target_set" = "Цель установлена";
+"home.target_cancelled" = "Цель отменена";
+"home.error" = "Ошибка";
+"home.invalid_input" = "Неверная цель или длительность";
+"error.no_network" = "Нет соединения с сетью";
+"error.unauthorized" = "Нет прав — у токена нет доступа на запись лечений";
+"error.bad_url" = "Неверный URL Nightscout";
+"error.decoding" = "Не удалось прочитать ответ сервера";
+"error.server" = "Ошибка сервера (%d)";
+
+"action.grams" = "Граммы";
+"action.target" = "Цель";
+"action.duration_min" = "Длительность (мин)";
+"action.reason" = "Причина";
+"action.cancel_target" = "Отменить цель";
+
+"settings.title" = "Настройки";
+"settings.ns_connection" = "Подключение Nightscout";
+"settings.ns_url" = "NS URL";
+"settings.access_token" = "Токен доступа";
+"settings.test_connection" = "Проверить соединение";
+"settings.testing" = "Проверка...";
+"settings.ok_connected" = "OK — Подключено";
+"settings.invalid_url" = "Неверный URL";
+"settings.glucose_units" = "Единицы глюкозы";
+"settings.units" = "Единицы";
+"settings.alarm_thresholds" = "Пороги алярмов";
+"settings.urgent_low" = "Критический низкий";
+"settings.low" = "Низкий";
+"settings.high" = "Высокий";
+"settings.urgent_high" = "Критический высокий";
+"settings.stale_min" = "Устар. (мин)";
+
+"history.title" = "История";
+
+"cancel" = "Отмена";
+"send" = "Отправить";
+"set" = "Установить";
+"tab.home" = "Главная";
+"tab.history" = "История";
+"tab.settings" = "Настройки";

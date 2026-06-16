@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "identifier": "60ede2a4c574da0004a38700",
+      "defaultProfile": "Default",
+      "units": "mg/dl",
+      "date": 1525380000000,
+      "store": {
+        "Default": {
+          "units": "mg/dl",
+          "dia": 5,
+          "timezone": "UTC",
+          "basal": [
+            { "time": "00:00", "timeAsSeconds": 0, "value": 0.5 },
+            { "time": "06:00", "timeAsSeconds": 21600, "value": 0.7 },
+            { "time": "12:00", "timeAsSeconds": 43200, "value": 0.6 }
+          ],
+          "carbratio": [
+            { "time": "00:00", "timeAsSeconds": 0, "value": 6.0 }
+          ],
+          "sens": [
+            { "time": "00:00", "timeAsSeconds": 0, "value": 49 }
+          ],
+          "target_low": [
+            { "time": "00:00", "timeAsSeconds": 0, "value": 100 }
+          ],
+          "target_high": [
+            { "time": "00:00", "timeAsSeconds": 0, "value": 100 }
+          ]
+        }
+      }
+    }
+  ]
+}

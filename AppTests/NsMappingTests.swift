@@ -1,0 +1,121 @@
+import XCTest
+@testable import AAPSClientiOS
+
+final class NsMappingTests: XCTestCase {
+
+    func test_mapsEntryToGlucoseReading() throws {
+        let data = try loadFixture("entries")
+        let readings = try NsMapping.glucose(from: data)
+        XCTAssertEqual(readings.count, 2)
+        XCTAssertEqual(readings[0].mgdl, 120)
+        XCTAssertEqual(readings[0].trend, .flat)
+        XCTAssertEqual(readings[1].mgdl, 124)
+        XCTAssertEqual(readings[1].trend, .fortyFiveUp)
+    }
+
+    func test_mapsTreatments() throws {
+        let data = try loadFixture("treatments")
+        let treatments = try NsMapping.treatments(from: data)
+        XCTAssertEqual(treatments.count, 3)
+
+        let bolus = treatments[0]
+        XCTAssertEqual(bolus.eventType, "Meal Bolus")
+        XCTAssertEqual(bolus.insulin, 2.5)
+        XCTAssertEqual(bolus.carbs, 30)
+
+        let tt = treatments[1]
+        XCTAssertEqual(tt.eventType, "Temporary Target")
+        XCTAssertEqual(tt.durationMin, 60)
+        XCTAssertEqual(tt.enteredBy, "AndroidAPS")
+
+        let carbs = treatments[2]
+        XCTAssertEqual(carbs.eventType, "Carb Correction")
+        XCTAssertEqual(carbs.carbs, 15)
+        XCTAssertEqual(carbs.enteredBy, "AAPSClient-iOS")
+    }
+
+    func test_mapsDeviceStatusToLoopStatus() throws {
+        let data = try loadFixture("devicestatus")
+        let status = try XCTUnwrap(try NsMapping.loopStatus(from: data))
+        XCTAssertEqual(status.iob, 1.85)
+        XCTAssertEqual(status.cob, 24.0)
+        XCTAssertEqual(status.eventualBgMgdl, 110)
+        XCTAssertEqual(status.tempBasalRate, 0.6)
+        XCTAssertEqual(status.pumpBattery, 76)
+        XCTAssertEqual(status.pumpReservoir, 142.5)
+    }
+
+    func test_mapsProfile() throws {
+        let data = try loadFixture("profile")
+        let profile = try NsMapping.profile(from: data)
+        XCTAssertEqual(profile.units, .mgdl)
+        XCTAssertEqual(profile.dia, 5)
+        XCTAssertEqual(profile.basal.count, 3)
+        XCTAssertEqual(profile.basal[0].startSeconds, 0)
+        XCTAssertEqual(profile.basal[0].rate, 0.5)
+    }
+
+    func test_mapsTrendStrings() {
+        XCTAssertEqual(TrendArrow.from(nsDirection: "DoubleUp"), .doubleUp)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "SingleUp"), .singleUp)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "FortyFiveUp"), .fortyFiveUp)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "Flat"), .flat)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "FortyFiveDown"), .fortyFiveDown)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "SingleDown"), .singleDown)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "DoubleDown"), .doubleDown)
+        XCTAssertEqual(TrendArrow.from(nsDirection: nil), .none)
+        XCTAssertEqual(TrendArrow.from(nsDirection: "NONE"), .none)
+    }
+
+    func test_emptyDeviceStatusReturnsNil() throws {
+        let json = #"{"status":200,"result":[]}"#
+        let status = try NsMapping.loopStatus(from: json.data(using: .utf8)!)
+        XCTAssertNil(status)
+    }
+
+    func test_profileSwitchParsesNameAndPercentage() throws {
+        let json = #"{"status":200,"result":[{"eventType":"Profile Switch","profile":"автотюн 10_07","percentage":140,"date":1}]}"#
+        let r = try NsMapping.treatments(from: json.data(using: .utf8)!)
+        XCTAssertEqual(r[0].profileName, "автотюн 10_07")
+        XCTAssertEqual(r[0].percentage, 140)
+    }
+
+    func test_tempTargetParsesTargetVariants() throws {
+        func tts(from json: String) throws -> [Treatment] {
+            try NsMapping.treatments(from: json.data(using: .utf8)!)
+        }
+
+        let standard = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":60,"targetBottom":90,"targetTop":100,"date":1}]}"#
+        let r1 = try tts(from: standard)
+        XCTAssertEqual(r1[0].targetBottom, 90)
+        XCTAssertEqual(r1[0].targetTop, 100)
+
+        let mgdlVariant = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":60,"targetBottomMgdl":80,"targetTopMgdl":80,"date":1}]}"#
+        let r2 = try tts(from: mgdlVariant)
+        XCTAssertEqual(r2[0].targetBottom, 80)
+
+        let singleTarget = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":60,"target":100,"date":1}]}"#
+        let r3 = try tts(from: singleTarget)
+        XCTAssertEqual(r3[0].targetBottom, 100)
+
+        let mmolField = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":60,"targetBottom":4.5,"date":1}]}"#
+        let r4 = try tts(from: mmolField)
+        XCTAssertEqual(r4[0].targetBottom, 81)
+
+        let fromReason = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":60,"reason":"120 mg/dl","date":1}]}"#
+        let r5 = try tts(from: fromReason)
+        XCTAssertEqual(r5[0].targetBottom, 120)
+
+        let cancelled = #"{"status":200,"result":[{"eventType":"Temporary Target","duration":0,"date":1}]}"#
+        let r6 = try tts(from: cancelled)
+        XCTAssertNil(r6[0].targetBottom)
+    }
+
+    func test_profileStoreParsesAllNames() throws {
+        let data = try loadFixture("profile")
+        let store = try NsMapping.profileStore(from: data)
+        XCTAssertEqual(store.defaultProfileName, "Default")
+        XCTAssertTrue(store.profileNames.contains("Default"))
+        XCTAssertNotNil(store.rawJson["Default"])
+    }
+}

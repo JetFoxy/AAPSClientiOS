@@ -1,0 +1,49 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "device": "openaps://samsung SM-G970F",
+      "date": 1525383610088,
+      "uploaderBattery": 84,
+      "isCharging": false,
+      "pump": {
+        "clock": "2018-05-03T21:40:00.000Z",
+        "reservoir": 142.5,
+        "battery": { "percent": 76, "voltage": 1.45 },
+        "status": { "status": "normal", "timestamp": "2018-05-03T21:40:00.000Z" }
+      },
+      "openaps": {
+        "suggested": {
+          "temp": "absolute",
+          "bg": 120,
+          "tick": "+0",
+          "eventualBG": 110,
+          "iob": 1.85,
+          "cob": 24.0,
+          "rate": 0.6,
+          "duration": 30,
+          "reason": "COB: 24, Dev: 5, BGI: -2.1, ISF: 49, CR: 6, Target: 100, minPredBG 105, IOB 1.85",
+          "predBGs": {
+            "IOB": [120, 118, 115, 112, 110, 109],
+            "COB": [120, 122, 121, 118, 114, 110],
+            "ZT": [120, 116, 112, 108, 105, 103],
+            "UAM": [120, 119, 117, 114, 111, 108]
+          },
+          "timestamp": "2018-05-03T21:40:10.000Z"
+        },
+        "enacted": {
+          "bg": 120,
+          "eventualBG": 110,
+          "iob": 1.85,
+          "cob": 24.0,
+          "rate": 0.6,
+          "duration": 30,
+          "received": true,
+          "reason": "COB: 24, Dev: 5, BGI: -2.1, ISF: 49, CR: 6, Target: 100, minPredBG 105, IOB 1.85",
+          "timestamp": "2018-05-03T21:40:11.000Z"
+        },
+        "iob": { "iob": 1.85, "basaliob": -0.24, "activity": 0.012 }
+      }
+    }
+  ]
+}

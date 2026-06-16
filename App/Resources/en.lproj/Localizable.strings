@@ -1,0 +1,53 @@
+"app.title" = "AAPSClient";
+"home.no_data" = "--";
+"home.offline" = "OFFLINE";
+"home.iob" = "IOB: %@ U";
+"home.cob" = "COB: %@ g";
+"home.eventual_bg" = "eventual BG: %@";
+"home.temp_basal" = "temp basal: %@ U/h";
+"home.carbs" = "Carbs";
+"home.target" = "Target";
+"home.add_carbs" = "Add Carbs";
+"home.temp_target" = "Temp Target";
+"home.carbs_sent" = "Carbs sent";
+"home.target_set" = "Target set";
+"home.target_cancelled" = "Target cancelled";
+"home.error" = "Error";
+"home.invalid_input" = "Invalid target or duration";
+"error.no_network" = "No network connection";
+"error.unauthorized" = "Not authorized — token lacks write permission for treatments";
+"error.bad_url" = "Invalid Nightscout URL";
+"error.decoding" = "Failed to read server response";
+"error.server" = "Server error (%d)";
+
+"action.grams" = "Grams";
+"action.target" = "Target";
+"action.duration_min" = "Duration (min)";
+"action.reason" = "Reason";
+"action.cancel_target" = "Cancel Target";
+
+"settings.title" = "Settings";
+"settings.ns_connection" = "Nightscout Connection";
+"settings.ns_url" = "NS URL";
+"settings.access_token" = "Access Token";
+"settings.test_connection" = "Test Connection";
+"settings.testing" = "Testing...";
+"settings.ok_connected" = "OK - Connected";
+"settings.invalid_url" = "Invalid URL";
+"settings.glucose_units" = "Glucose Units";
+"settings.units" = "Units";
+"settings.alarm_thresholds" = "Alarm Thresholds";
+"settings.urgent_low" = "Urgent Low";
+"settings.low" = "Low";
+"settings.high" = "High";
+"settings.urgent_high" = "Urgent High";
+"settings.stale_min" = "Stale (min)";
+
+"history.title" = "History";
+
+"cancel" = "Cancel";
+"send" = "Send";
+"set" = "Set";
+"tab.home" = "Home";
+"tab.history" = "History";
+"tab.settings" = "Settings";
