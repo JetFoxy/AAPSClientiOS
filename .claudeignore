@@ -1,0 +1,13 @@
+# Generated/binary Xcode artifacts — large, derived, not useful for Claude
+AAPSClientiOS.xcodeproj/project.xcworkspace/xcuserdata/
+AAPSClientiOS.xcodeproj/xcuserdata/
+AAPSClientiOS.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+DerivedData/
+build/
+*.xcuserstate
+
+# Assets — binary image files
+App/Assets.xcassets/AppIcon.appiconset/*.png
+
+# macOS noise
+.DS_Store

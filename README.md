@@ -1,27 +1,100 @@
 # AAPSClient iOS
 
-Нативный iOS-клиент (follower) для AndroidAPS через Nightscout (API v3). Мониторинг петли AAPS
-+ удалённые действия-записи (carbs, temp target, переключение профиля, care-события,
-управление петлёй) через Nightscout. Болюс не поддерживается (вне модели NS).
+Нативный iOS-клиент (follower) для [AndroidAPS](https://github.com/nightscout/AndroidAPS) через
+Nightscout API v3. Мониторинг петли AAPS (глюкоза, IOB/COB, статус петли, история событий) и
+ограниченный набор удалённых действий-записи — без необходимости запускать Android.
+
+**Болюс не поддерживается** — это follower/remote-control клиент, а не контроллер помпы.
+
+## Возможности
+
+- Текущая глюкоза, тренд, IOB/COB из device status AndroidAPS
+- Статус петли и история последних treatments
+- Удалённые действия (требуют соответствующей роли на access-токене в Nightscout):
+  - Ввод углеводов (с подтверждением перед отправкой)
+  - Установка/отмена temp target
+  - Переключение профиля (с процентом и длительностью)
+  - Care events
+  - Управление режимом петли (open/closed/suspend)
+- Фоновое обновление (`BGAppRefreshTask`, ~5 мин) и локальные алармы по порогам глюкозы
+- Статистика (TIR, перцентили) за настраиваемый период
+
+## Требования
+
+- iOS 16+
+- Работающий Nightscout с включённым API v3, подключённый к AndroidAPS
+- Access-токен Nightscout с нужной ролью:
+  - `readable` — только мониторинг
+  - `careportal`/`admin` (или кастомная роль с `api:treatments:create`) — для удалённых записей
+  - Для переключения профиля/режима петли на стороне AndroidAPS должны быть включены мастер-настройки
+    `NsClientAcceptProfileSwitch` / `NsClientAcceptRunningMode`
 
 ## Стек
-- Swift / SwiftUI, iOS 16+
-- Проект генерируется **xcodegen** из `project.yml` (сам `.xcodeproj` в .gitignore)
+
+- Swift 5.9 / SwiftUI, iOS 16+
+- Проект генерируется [xcodegen](https://github.com/yonaskolb/XcodeGen) из `project.yml` —
+  сам `.xcodeproj` не хранится в git
 
 ## Сборка
+
 ```bash
+brew install xcodegen   # если ещё не установлен
+
+# Опционально: свой Apple Developer Team ID для подписи
+cp Config/Local.xcconfig.example Config/Local.xcconfig
+# отредактировать Config/Local.xcconfig
+
 xcodegen generate
+open AAPSClientiOS.xcodeproj
+```
+
+Сборка для устройства:
+
+```bash
 xcodebuild -project AAPSClientiOS.xcodeproj -scheme AAPSClientiOS \
   -destination 'generic/platform=iOS' -allowProvisioningUpdates build
 ```
 
-## Документация
-- `docs/2026-06-15-aapsclient-ios-port-design.md` — дизайн-спека
-- `docs/2026-06-15-aapsclient-ios-port-plan.md` — план реализации (раунды R1–R11)
-- `docs/contracts/nightscout-v3-contract.md` — контракт Nightscout API v3 (auth, чтение,
-  запись действий) + фикстуры в `docs/contracts/fixtures/`
+Тесты:
+
+```bash
+xcodebuild test -project AAPSClientiOS.xcodeproj -scheme AAPSClientiOSTests \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+Архивирование для распространения использует `ExportOptions.plist` (скопировать из
+`ExportOptions.plist.example` и указать свой Team ID — файл в `.gitignore`, так как привязан
+к конкретному Apple Developer аккаунту).
 
 ## Архитектура
-Послойная: `NightscoutClient` (NS v3, парсинг через `JSONSerialization` — НЕ `JSONDecoder`)
-→ `DomainModel` → `AppStore` → SwiftUI. Сбоку: `NsTreatmentWriter`, `AlarmEngine`,
-`BackgroundScheduler`.
+
+Послойная: `NightscoutClientLive` (HTTP) → `NsMapping` (JSON → доменные модели) → `AppStore`
+(состояние приложения) → SwiftUI views.
+
+- **`NightscoutClient`** — протокол чтения NS и отправки treatments. `UnconfiguredClient`
+  используется до тех пор, пока в Keychain не появятся учётные данные.
+- **`NsTreatmentWriter`** — удалённые записи (carbs, temp target, профиль, care events, режим петли).
+- **`AlarmEngine`** — оценка пороговых значений глюкозы и локальные уведомления.
+- **`BackgroundScheduler`** — периодическое обновление через `BGAppRefreshTask`.
+- **`AppStore`** — единый `@ObservableObject`, инжектируемый во все views.
+
+JSON-ответы парсятся через `JSONSerialization`, а не `JSONDecoder` — `JSONDecoder` в
+современных версиях iOS падает на высокоточных числах с плавающей запятой
+(напр. `82.8000000000001`), которые AAPS/OpenAPS обычно отдают для IOB/COB.
+
+Контракт Nightscout API v3, по которому реализован клиент, описан в
+[`docs/contracts/nightscout-v3-contract.md`](docs/contracts/nightscout-v3-contract.md).
+
+## Тестирование
+
+Тесты используют fixture-based `NightscoutClient` и mock HTTP transport; JSON-фикстуры лежат
+в `AppTests/Fixtures/` (зеркалируются в `docs/contracts/fixtures/` как референс контракта).
+
+## Локализация
+
+Строки UI локализуются через `String(localized:)`; переводы — в
+`App/Resources/{en,ru}.lproj/Localizable.strings`.
+
+## Лицензия
+
+[GNU AGPLv3](LICENSE), как и AndroidAPS.

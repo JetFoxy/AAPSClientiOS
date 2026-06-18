@@ -118,4 +118,16 @@ final class NsMappingTests: XCTestCase {
         XCTAssertTrue(store.profileNames.contains("Default"))
         XCTAssertNotNil(store.rawJson["Default"])
     }
+
+    func test_mapsDeviceStatusHistory() throws {
+        let data = try loadFixture("devicestatus_history")
+        let entries = try NsMapping.deviceStatusHistory(from: data)
+        XCTAssertEqual(entries.count, 5)
+        XCTAssertEqual(entries[0].iob, 1.20, accuracy: 0.001)
+        XCTAssertEqual(entries[0].cob, 10.0, accuracy: 0.01)
+        XCTAssertEqual(entries[3].iob, 2.10, accuracy: 0.001)
+        XCTAssertEqual(entries[3].cob, 45.0, accuracy: 0.01)
+        XCTAssertEqual(entries[4].iob, -0.30, accuracy: 0.001)
+        XCTAssertTrue(entries[0].date > entries[4].date)
+    }
 }

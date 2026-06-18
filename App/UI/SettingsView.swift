@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var store: AppStore
+    let writer: NsTreatmentWriter
 
     @State private var nsUrl = ""
     @State private var accessToken = ""
@@ -15,8 +16,9 @@ struct SettingsView: View {
 
     private let keychain = KeychainStore(service: "org.diy.aapsclient")
 
-    init(store: AppStore) {
+    init(store: AppStore, writer: NsTreatmentWriter) {
         self.store = store
+        self.writer = writer
         let t = store.thresholds
         _urgentLow = State(initialValue: String(t.urgentLow))
         _low = State(initialValue: String(t.low))
@@ -65,7 +67,7 @@ struct SettingsView: View {
             }
 
             NavigationLink {
-                ProfileView(store: store)
+                ProfileView(store: store, writer: writer)
             } label: {
                 Text("Profile")
             }

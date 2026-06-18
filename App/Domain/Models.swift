@@ -34,6 +34,13 @@ struct LoopStatus: Equatable {
     let reason: LoopReason?
 }
 
+struct DeviceStatusEntry: Identifiable, Equatable {
+    var id: Date { date }
+    let date: Date
+    let iob: Double
+    let cob: Double
+}
+
 struct Predictions: Equatable {
     let iob: [Int]
     let cob: [Int]

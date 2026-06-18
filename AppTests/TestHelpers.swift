@@ -55,6 +55,18 @@ final class FixtureNightscoutClient: NightscoutClient {
         return try NsMapping.profileStore(from: data)
     }
 
+    func fetchEntries(sinceDays days: Int) async throws -> [GlucoseReading] {
+        if let error = shouldThrow { throw error }
+        let data = try loadFixture("entries")
+        return try NsMapping.glucose(from: data)
+    }
+
+    func fetchDeviceStatusHistory(since: Date) async throws -> [DeviceStatusEntry] {
+        if let error = shouldThrow { throw error }
+        let data = try loadFixture("devicestatus_history")
+        return try NsMapping.deviceStatusHistory(from: data)
+    }
+
     func postTreatment(_ payload: [String: Any]) async throws {
         if let error = shouldThrow { throw error }
         postedPayloads.append(payload)

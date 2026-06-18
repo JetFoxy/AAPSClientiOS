@@ -11,9 +11,15 @@ protocol NightscoutClient {
     /// Latest care-portal events (site/sensor/insulin/battery) — these are infrequent and fall
     /// outside the general treatments window, so they need a dedicated eventType-filtered query.
     func fetchCareEvents() async throws -> [Treatment]
+    /// Paginated entries covering `days` back (live client pages past the NS per-request cap).
+    /// MUST be a protocol requirement so calls via the protocol type dispatch to the live override,
+    /// not the extension default below.
+    func fetchEntries(sinceDays days: Int) async throws -> [GlucoseReading]
+    func fetchDeviceStatusHistory(since: Date) async throws -> [DeviceStatusEntry]
 }
 
 extension NightscoutClient {
-    // Default keeps existing conformers (mocks) compiling; live client overrides.
     func fetchCareEvents() async throws -> [Treatment] { try await fetchTreatments(since: nil) }
+    func fetchEntries(sinceDays days: Int) async throws -> [GlucoseReading] { try await fetchEntries(limit: days * 320) }
+    func fetchDeviceStatusHistory(since: Date) async throws -> [DeviceStatusEntry] { [] }
 }

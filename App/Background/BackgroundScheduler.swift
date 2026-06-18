@@ -2,7 +2,7 @@ import BackgroundTasks
 import Foundation
 
 final class BackgroundScheduler {
-    static let refreshTaskId = "org.diy.aapsclient.refresh"
+    static let refreshTaskId = "com.nightaps.aapsclientios.refresh"
 
     private let store: AppStore
 

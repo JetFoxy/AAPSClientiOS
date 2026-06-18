@@ -71,6 +71,20 @@ enum NsMapping {
         )
     }
 
+    static func deviceStatusHistory(from data: Data) throws -> [DeviceStatusEntry] {
+        try resultArray(data).compactMap { d in
+            guard let ts = num(d["date"]) else { return nil }
+            let openaps = d["openaps"] as? [String: Any]
+            let enacted = openaps?["enacted"] as? [String: Any]
+            let suggested = openaps?["suggested"] as? [String: Any]
+            let active = enacted ?? suggested
+            let iobObj = openaps?["iob"] as? [String: Any]
+            let iob = num(active?["iob"]) ?? num(iobObj?["iob"]) ?? 0
+            let cob = num(active?["cob"]) ?? num(active?["COB"]) ?? 0
+            return DeviceStatusEntry(date: date(from: ts), iob: iob, cob: cob)
+        }
+    }
+
     static func profile(from data: Data) throws -> NsProfile {
         guard let latest = try resultArray(data).first,
               let store = latest["store"] as? [String: Any],

@@ -47,3 +47,58 @@ enum StatisticsCompute {
         )
     }
 }
+
+struct HourlyPercentiles: Identifiable, Equatable {
+    let hour: Int
+    let p10: Double
+    let p25: Double
+    let p50: Double
+    let p75: Double
+    let p90: Double
+    var id: Int { hour }
+}
+
+extension StatisticsCompute {
+    static func hourlyPercentiles(readings: [GlucoseReading], units: GlucoseUnits) -> [HourlyPercentiles] {
+        let calendar = Calendar.current
+        var byHour: [Int: [Double]] = [:]
+        for r in readings {
+            let h = calendar.component(.hour, from: r.date)
+            let val = units == .mmol ? Double(r.mgdl) / 18.0182 : Double(r.mgdl)
+            byHour[h, default: []].append(val)
+        }
+        // Compute percentiles for hours that have data.
+        var raw: [Int: HourlyPercentiles] = [:]
+        for h in 0..<24 {
+            guard let vals = byHour[h], !vals.isEmpty else { continue }
+            let sorted = vals.sorted()
+            func p(_ pct: Double) -> Double {
+                let idx = pct * Double(sorted.count - 1)
+                let lo = Int(idx), hi = min(lo + 1, sorted.count - 1)
+                return sorted[lo] + (idx - Double(lo)) * (sorted[hi] - sorted[lo])
+            }
+            raw[h] = HourlyPercentiles(hour: h, p10: p(0.10), p25: p(0.25), p50: p(0.50), p75: p(0.75), p90: p(0.90))
+        }
+        guard !raw.isEmpty else { return [] }
+        // Fill all 24 hours by interpolating from nearest neighbours (circular).
+        return (0..<24).map { h in
+            if let hp = raw[h] { return hp }
+            for dist in 1..<24 {
+                let l = raw[(h - dist + 24) % 24]
+                let r = raw[(h + dist) % 24]
+                if let l, let r {
+                    return HourlyPercentiles(hour: h,
+                        p10: (l.p10 + r.p10) / 2, p25: (l.p25 + r.p25) / 2,
+                        p50: (l.p50 + r.p50) / 2, p75: (l.p75 + r.p75) / 2,
+                        p90: (l.p90 + r.p90) / 2)
+                }
+                // Single neighbour fallback
+                if let n = l ?? r {
+                    return HourlyPercentiles(hour: h, p10: n.p10, p25: n.p25,
+                                             p50: n.p50, p75: n.p75, p90: n.p90)
+                }
+            }
+            return HourlyPercentiles(hour: h, p10: 0, p25: 0, p50: 0, p75: 0, p90: 0)
+        }
+    }
+}

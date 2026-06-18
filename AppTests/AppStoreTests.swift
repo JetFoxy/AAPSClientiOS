@@ -110,6 +110,14 @@ final class AppStoreTests: XCTestCase {
         XCTAssertEqual(store.displayUnits, .mmol)
         UserDefaults.standard.removeObject(forKey: "display.glucoseUnits")
     }
+
+    func test_refreshPopulatesDeviceStatusHistory() async throws {
+        let store = AppStore(client: FixtureNightscoutClient(), alarmEngine: AlarmEngineLive())
+        try await store.refresh()
+        XCTAssertEqual(store.deviceStatusHistory.count, 5)
+        XCTAssertEqual(store.deviceStatusHistory[0].iob, 1.20, accuracy: 0.001)
+        XCTAssertEqual(store.deviceStatusHistory[2].cob, 35.0, accuracy: 0.01)
+    }
 }
 
 private final class UnconfiguredTestClient: NightscoutClient {
@@ -120,4 +128,7 @@ private final class UnconfiguredTestClient: NightscoutClient {
     func fetchProfile() async throws -> NsProfile { throw NsError.badURL }
     func fetchProfileStore() async throws -> NsProfileStore { throw NsError.badURL }
     func postTreatment(_ payload: [String: Any]) async throws { throw NsError.badURL }
+    func fetchCareEvents() async throws -> [Treatment] { throw NsError.badURL }
+    func fetchEntries(sinceDays days: Int) async throws -> [GlucoseReading] { throw NsError.badURL }
+    func fetchDeviceStatusHistory(since: Date) async throws -> [DeviceStatusEntry] { throw NsError.badURL }
 }

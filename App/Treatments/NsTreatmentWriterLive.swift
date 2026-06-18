@@ -30,6 +30,10 @@ final class NsTreatmentWriterLive: NsTreatmentWriter {
         try await client.postTreatment(Self.buildEvent(eventType: eventType, at: date, notes: notes, glucoseMgdl: glucoseMgdl, durationMin: durationMin))
     }
 
+    func setLoopMode(_ mode: String, durationMin: Int) async throws {
+        try await client.postTreatment(Self.buildLoopMode(mode, durationMin: durationMin))
+    }
+
     static func buildCarbs(grams: Double, at date: Date) -> [String: Any] {
         [
             "app": appName,
@@ -91,5 +95,16 @@ final class NsTreatmentWriterLive: NsTreatmentWriter {
         if let glucose = glucoseMgdl { payload["glucose"] = glucose; payload["units"] = "mg/dl" }
         if let dur = durationMin { payload["duration"] = dur }
         return payload
+    }
+
+    static func buildLoopMode(_ mode: String, durationMin: Int) -> [String: Any] {
+        [
+            "app": appName,
+            "eventType": "OpenAPS Offline",
+            "mode": mode,
+            "duration": durationMin,
+            "date": Int64(Date().timeIntervalSince1970 * 1000),
+            "enteredBy": appName,
+        ]
     }
 }

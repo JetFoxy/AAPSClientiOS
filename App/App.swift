@@ -1,12 +1,15 @@
 import SwiftUI
 import BackgroundTasks
 import UserNotifications
+import AVFoundation
 
 @main
 struct AAPSClientApp: App {
     @StateObject private var store: AppStore
+    @Environment(\.scenePhase) private var scenePhase
     private let writer: NsTreatmentWriter
     private let bgScheduler: BackgroundScheduler
+    private let keepAlive = AudioKeepAlive()
 
     init() {
         let keychain = KeychainStore(service: "org.diy.aapsclient")
@@ -41,7 +44,7 @@ struct AAPSClientApp: App {
                 .tabItem { Label("tab.history", systemImage: "clock") }
 
                 NavigationStack {
-                    SettingsView(store: store)
+                    SettingsView(store: store, writer: writer)
                 }
                 .tabItem { Label("tab.settings", systemImage: "gear") }
 
@@ -56,6 +59,11 @@ struct AAPSClientApp: App {
                 try? await UNUserNotificationCenter.current()
                     .requestAuthorization(options: [.alert, .sound, .badge])
                 // Initial data refresh is owned by HomeView (.task) so errors surface there.
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    keepAlive.start { Task { try? await store.refresh() } }
+                }
             }
         }
     }

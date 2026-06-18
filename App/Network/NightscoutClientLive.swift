@@ -65,6 +65,31 @@ final class NightscoutClientLive: NightscoutClient {
         return try NsMapping.profileStore(from: data)
     }
 
+    /// Paginated entries covering `days` back.
+    /// Uses skip-based pagination + server-side date$gt filter (NS v3 ignores date$lt cursors).
+    func fetchEntries(sinceDays days: Int) async throws -> [GlucoseReading] {
+        let cutoffMs = Int64(Date().addingTimeInterval(-Double(days) * 86400).timeIntervalSince1970 * 1000)
+        let pageSize = 1000
+        var all: [GlucoseReading] = []
+        var skip = 0
+        for _ in 0..<200 {  // safety cap: 200 pages × server-limit ≈ 100k readings
+            let path = "api/v3/entries?sort$desc=date&limit=\(pageSize)&skip=\(skip)&date$gt=\(cutoffMs)"
+            let data = try await get(path)
+            let page = try NsMapping.glucose(from: data)
+            if page.isEmpty { break }
+            all.append(contentsOf: page)
+            skip += page.count
+        }
+        return all
+    }
+
+    func fetchDeviceStatusHistory(since: Date) async throws -> [DeviceStatusEntry] {
+        let cutoffMs = Int64(since.timeIntervalSince1970 * 1000)
+        let path = "api/v3/devicestatus?sort$desc=date&limit=288&date$gt=\(cutoffMs)"
+        let data = try await get(path)
+        return try NsMapping.deviceStatusHistory(from: data)
+    }
+
     func fetchCareEvents() async throws -> [Treatment] {
         let types = ["Site Change", "Sensor Change", "Sensor Start", "Insulin Change", "Pump Battery Change", "Profile Switch"]
         let inValue = types.joined(separator: "|")

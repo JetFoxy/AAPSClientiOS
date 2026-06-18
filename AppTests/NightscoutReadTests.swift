@@ -104,4 +104,23 @@ final class NightscoutReadTests: XCTestCase {
         } catch {
         }
     }
+
+    func test_fetchDeviceStatusHistoryURL() async throws {
+        let transport = MockAuthTransport()
+        transport.responseData = #"{"token":"jwt","iat":1,"exp":99999}"#.data(using: .utf8)!
+        let client = NightscoutClientLive(baseURL: testBaseURL, accessToken: "t", transport: transport)
+        try await client.authorize()
+
+        transport.responseData = try loadFixture("devicestatus_history")
+        let since = Date(timeIntervalSince1970: 1_718_571_600)
+        let entries = try await client.fetchDeviceStatusHistory(since: since)
+
+        let url = transport.lastRequest?.url?.absoluteString ?? ""
+        XCTAssertTrue(url.contains("api/v3/devicestatus"))
+        XCTAssertTrue(url.contains("sort$desc=date"))
+        XCTAssertTrue(url.contains("limit=288"))
+        XCTAssertTrue(url.contains("date$gt=1718571600000"))
+        XCTAssertEqual(entries.count, 5)
+        XCTAssertEqual(entries[0].iob, 1.20, accuracy: 0.001)
+    }
 }

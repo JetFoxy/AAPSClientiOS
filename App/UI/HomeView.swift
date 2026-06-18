@@ -21,6 +21,11 @@ struct HomeView: View {
     @State private var profilePercentage = "100"
     @State private var profileDuration = "0"
     @State private var showEventSheet = false
+    @State private var showLoopMenu = false
+    @State private var loopDuration = "60"
+    @State private var showCarbsConfirm = false
+    @State private var showIOB = false
+    @State private var showCOB = false
 
     private var loopState: LoopState {
         LoopStateCalc.from(statusTimestamp: store.loopStatus?.timestamp, now: Date())
@@ -80,7 +85,6 @@ struct HomeView: View {
         return lines
     }
 
-    private var deltas: Deltas { DeltasCompute.compute(readings: store.readings, units: units) }
 
     private struct BasalSegment: Equatable {
         let start: Date
@@ -107,8 +111,9 @@ struct HomeView: View {
         }
     }
 
+    // Maps U/h → mg/dl equivalent Y, capped at 3 U/h filling the 30–57 strip.
     private func basalY(_ rate: Double) -> Double {
-        yVal(40 + min(rate, 2.0) / 2.0 * 20)
+        yVal(30 + min(rate, 3.0) / 3.0 * 27)
     }
 
     var body: some View {
@@ -133,6 +138,8 @@ struct HomeView: View {
             catch { refreshError = error.localizedDescription }
         }
         .task {
+            // Only refetch if cached data is stale (switching tabs back won't reload).
+            guard store.isStale else { return }
             do { try await store.refresh(); refreshError = nil }
             catch { refreshError = error.localizedDescription }
         }
@@ -140,6 +147,16 @@ struct HomeView: View {
         .sheet(isPresented: $showTarget) { targetSheet }
         .sheet(isPresented: $showProfileSwitch) { profileSwitchSheet }
         .sheet(isPresented: $showEventSheet) { eventSheet }
+        .confirmationDialog("Loop Mode", isPresented: $showLoopMenu) {
+            Button("Close Loop") { setLoop("CLOSED_LOOP", 1440) }
+            Button("Open Loop") { setLoop("OPEN_LOOP", 120) }
+            Button("Suspend 30m") { setLoop("SUSPENDED_BY_USER", 30) }
+            Button("Suspend 1h") { setLoop("SUSPENDED_BY_USER", 60) }
+            Button("Suspend 2h") { setLoop("SUSPENDED_BY_USER", 120) }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Requires NS Accept Running Mode on master device")
+        }
     }
 
     // MARK: - Status Card
@@ -166,12 +183,20 @@ struct HomeView: View {
                     .frame(width: 100, height: 100)
                 if let latest = store.readings.first {
                     let classif = Formatting.classify(mgdl: latest.mgdl, thresholds: store.thresholds)
+                    let delta = store.readings.dropFirst().first.map { latest.mgdl - $0.mgdl }
                     VStack(spacing: 0) {
                         Text(Formatting.format(latest.mgdl, units: units))
                             .font(.system(size: 30, weight: .bold))
                             .foregroundColor(color(for: classif))
-                        Text(Formatting.trendSymbol(latest.trend))
-                            .font(.system(size: 20))
+                        HStack(spacing: 2) {
+                            Text(Formatting.trendSymbol(latest.trend))
+                                .font(.system(size: 16))
+                            if let d = delta, d != 0 {
+                                Text(deltaString(d))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(d > 0 ? .orange : .cyan)
+                            }
+                        }
                         let secs = Int(Date().timeIntervalSince(latest.date))
                         Text("\(secs / 60)m").font(.system(size: 10)).foregroundColor(.secondary)
                     }
@@ -179,6 +204,8 @@ struct HomeView: View {
                     Text("home.no_data").font(.system(size: 20, weight: .bold)).foregroundColor(.gray)
                 }
             }
+            .contentShape(Circle())
+            .onTapGesture { showLoopMenu = true }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 if let latest = store.readings.first {
@@ -195,28 +222,6 @@ struct HomeView: View {
             return "Loop \(min)m ago"
         }
         return "Loop —"
-    }
-
-    private var deltasRow: some View {
-        HStack(spacing: 16) {
-            deltaLabel("Δ", deltas.delta)
-            deltaLabel("Δ15", deltas.delta15)
-            deltaLabel("Δ40", deltas.delta40)
-            Spacer()
-        }
-        .font(.caption)
-    }
-
-    private func deltaLabel(_ label: String, _ value: Int?) -> some View {
-        HStack(spacing: 2) {
-            Text(label).fontWeight(.medium).foregroundColor(.secondary)
-            if let v = value {
-                Text(v > 0 ? "+\(v)" : "\(v)")
-                    .foregroundColor(v > 0 ? .orange : v < 0 ? .cyan : .secondary)
-            } else {
-                Text("—").foregroundColor(.secondary)
-            }
-        }
     }
 
     private var statusRow: some View {
@@ -259,7 +264,7 @@ struct HomeView: View {
                 if let bg = status.eventualBgMgdl {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.turn.down.right").font(.caption2)
-                        Text("eventBG \(bg)").font(.caption2)
+                        Text("eventBG \(gv(Double(bg)))").font(.caption2)
                     }
                 }
             }
@@ -351,10 +356,25 @@ struct HomeView: View {
     // MARK: - Chart
 
     private func yVal(_ mgdl: Double) -> Double { units == .mmol ? mgdl / 18.0182 : mgdl }
-    private var yDomain: ClosedRange<Double> { units == .mmol ? (40/18.0182)...(300/18.0182) : 40...300 }
+    // Lower bound at 30 to give basal strip and bolus spikes room below urgentLow (55).
+    private var yDomain: ClosedRange<Double> { units == .mmol ? (30/18.0182)...(300/18.0182) : 30...300 }
     private var chartXEnd: Date { predictionLines.flatMap { $0.points }.map { $0.0 }.max() ?? Date() }
+
+    private var statusInWindow: [DeviceStatusEntry] {
+        store.deviceStatusHistory
+            .filter { $0.date >= cutoff }
+            .sorted { $0.date < $1.date }
+    }
     /// Format a glucose-unit value (mg/dl) for display in selected units.
     private func gv(_ mgdl: Double) -> String { units == .mmol ? String(format: "%.1f", mgdl / 18.0182) : String(format: "%.0f", mgdl) }
+
+    private func deltaString(_ d: Int) -> String {
+        if units == .mmol {
+            let v = Double(d) / 18.0182
+            return v >= 0 ? String(format: "+%.1f", v) : String(format: "%.1f", v)
+        }
+        return d >= 0 ? "+\(d)" : "\(d)"
+    }
 
     /// Base loop target (mg/dl) when no temp target is active.
     private func baseTargetMgdl() -> Double {
@@ -394,12 +414,17 @@ struct HomeView: View {
     }
 
     private var chartView: some View {
-        VStack(alignment: .trailing, spacing: 0) {
+        VStack(alignment: .trailing, spacing: 4) {
             Picker("Hours", selection: $selectedHours) {
                 Text("3h").tag(3); Text("6h").tag(6); Text("12h").tag(12)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            HStack(spacing: 6) {
+                Spacer()
+                subChartToggle("IOB", active: showIOB, color: .blue) { showIOB.toggle() }
+                subChartToggle("COB", active: showCOB, color: .orange) { showCOB.toggle() }
+            }
             Chart { chartContent }
                 .chartYScale(domain: yDomain)
                 .chartXScale(domain: cutoff...chartXEnd)
@@ -428,6 +453,8 @@ struct HomeView: View {
                     .padding()
                 }
                 .frame(height: 250)
+            if showIOB && !statusInWindow.isEmpty { iobChart }
+            if showCOB && !statusInWindow.isEmpty { cobChart }
         }
     }
 
@@ -458,7 +485,14 @@ struct HomeView: View {
         ForEach(bolusesInWindow) { t in
             PointMark(x: .value("T", t.date), y: .value("D", yVal(bgMgdl(at: t.date))))
                 .foregroundStyle(.blue)
-                .symbol { Image(systemName: "arrowtriangle.down.fill").font(.system(size: 6 + min((t.insulin ?? 0) * 2.5, 11))).foregroundStyle(.blue) }
+                .symbol { Image(systemName: "arrowtriangle.down.fill")
+                    .font(.system(size: 6 + min((t.insulin ?? 0) * 2.5, 11)))
+                    .foregroundStyle(.blue) }
+                .annotation(position: .top, spacing: 2) {
+                    Text(String(format: "%.1f", t.insulin ?? 0))
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.blue)
+                }
         }
         ForEach(predictionLines.indices, id: \.self) { i in
             let line = predictionLines[i]
@@ -476,13 +510,101 @@ struct HomeView: View {
         RuleMark(y: .value("H", yVal(Double(store.thresholds.high))))
             .foregroundStyle(.green.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
 
+        // Scheduled basal strip at bottom of chart
         ForEach(basalSegments, id: \.start) { seg in
             RectangleMark(
                 xStart: .value("S", seg.start), xEnd: .value("E", seg.end),
-                yStart: .value("B", yVal(38)), yEnd: .value("B", basalY(seg.rate))
+                yStart: .value("B", yVal(30)), yEnd: .value("B", basalY(seg.rate))
             )
-            .foregroundStyle(Color.blue.opacity(0.25))
+            .foregroundStyle(Color.blue.opacity(0.3))
         }
+        // Temp basal overlay: highlight right edge when current rate differs from scheduled
+        if let tempRate = store.loopStatus?.tempBasalRate,
+           let lastSeg = basalSegments.last, abs(tempRate - lastSeg.rate) > 0.001 {
+            RectangleMark(
+                xStart: .value("S", lastSeg.start), xEnd: .value("E", lastSeg.end),
+                yStart: .value("B", yVal(30)), yEnd: .value("B", basalY(tempRate))
+            )
+            .foregroundStyle(Color.blue.opacity(0.6))
+        }
+    }
+
+    private var iobChart: some View {
+        let values = statusInWindow.map { $0.iob }
+        let absMax = max(values.map { abs($0) }.max() ?? 0, 0.5)
+        let yRange = (-absMax * 1.2)...(absMax * 1.2)
+        return Chart {
+            ForEach(statusInWindow) { e in
+                AreaMark(
+                    x: .value("T", e.date),
+                    yStart: .value("base", 0.0),
+                    yEnd: .value("IOB", e.iob)
+                )
+                .foregroundStyle(Color.blue.opacity(0.7))
+                .interpolationMethod(.monotone)
+            }
+            RuleMark(y: .value("Zero", 0.0))
+                .foregroundStyle(Color.secondary.opacity(0.35))
+                .lineStyle(StrokeStyle(lineWidth: 0.5))
+        }
+        .chartXScale(domain: cutoff...chartXEnd)
+        .chartYScale(domain: yRange)
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+                AxisGridLine().foregroundStyle(Color.white.opacity(0.1))
+                AxisValueLabel { EmptyView() }
+            }
+        }
+        .frame(height: 90)
+        .overlay(alignment: .topLeading) {
+            Text("IOB").font(.caption2).bold().foregroundColor(.blue)
+                .padding(.leading, 6).padding(.top, 4)
+        }
+    }
+
+    private var cobChart: some View {
+        let maxCOB = max(statusInWindow.map { $0.cob }.max() ?? 0, 10.0)
+        return Chart {
+            ForEach(statusInWindow) { e in
+                AreaMark(
+                    x: .value("T", e.date),
+                    yStart: .value("base", 0.0),
+                    yEnd: .value("COB", e.cob)
+                )
+                .foregroundStyle(Color.orange.opacity(0.7))
+                .interpolationMethod(.monotone)
+            }
+            RuleMark(y: .value("Zero", 0.0))
+                .foregroundStyle(Color.secondary.opacity(0.35))
+                .lineStyle(StrokeStyle(lineWidth: 0.5))
+        }
+        .chartXScale(domain: cutoff...chartXEnd)
+        .chartYScale(domain: 0...(maxCOB * 1.2))
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+                AxisGridLine().foregroundStyle(Color.white.opacity(0.1))
+                AxisValueLabel { EmptyView() }
+            }
+        }
+        .frame(height: 90)
+        .overlay(alignment: .topLeading) {
+            Text("COB").font(.caption2).bold().foregroundColor(.orange)
+                .padding(.leading, 6).padding(.top, 4)
+        }
+    }
+
+    private func subChartToggle(_ label: String, active: Bool, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(active ? color : Color.primary.opacity(0.1))
+                .foregroundColor(active ? .white : .primary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
@@ -504,8 +626,14 @@ struct HomeView: View {
             .navigationTitle("home.add_carbs")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("cancel") { showCarbs = false } }
-                ToolbarItem(placement: .confirmationAction) { Button("send") { sendCarbs(); showCarbs = false }.disabled(carbsGrams.isEmpty) }
+                ToolbarItem(placement: .confirmationAction) { Button("send") { showCarbsConfirm = true }.disabled(carbsGrams.isEmpty) }
             }
+        }
+        .confirmationDialog("Confirm Carbs", isPresented: $showCarbsConfirm) {
+            Button("Send \(carbsGrams)g", role: .destructive) { sendCarbs(); showCarbs = false }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Send \(carbsGrams)g carbs to Nightscout?")
         }
     }
 
@@ -696,6 +824,20 @@ struct HomeView: View {
                     durationMin: eventDuration.isEmpty ? nil : Int(eventDuration)
                 )
                 statusMessage = "Event logged"
+                statusIsError = false
+                try? await store.refresh()
+            } catch {
+                statusMessage = error.localizedDescription
+                statusIsError = true
+            }
+        }
+    }
+
+    private func setLoop(_ mode: String, _ durationMin: Int) {
+        Task {
+            do {
+                try await writer.setLoopMode(mode, durationMin: durationMin)
+                statusMessage = "Loop command sent"
                 statusIsError = false
                 try? await store.refresh()
             } catch {

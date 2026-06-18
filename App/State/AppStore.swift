@@ -21,6 +21,7 @@ final class AppStore: ObservableObject {
     @Published var thresholds: AlarmThresholds
     @Published var displayUnits: GlucoseUnits = .mgdl
     @Published var careEvents: [Treatment] = []
+    @Published var deviceStatusHistory: [DeviceStatusEntry] = []
 
     var activeProfileSwitch: Treatment? {
         // Profile switches are infrequent → may be outside the general treatments window.
@@ -38,6 +39,16 @@ final class AppStore: ObservableObject {
     let alarmEngine: AlarmEngine
     var client: NightscoutClient
     private(set) var lastRefresh = Date.distantPast
+
+    /// Data older than this is considered stale and worth refetching.
+    var isStale: Bool { Date().timeIntervalSince(lastRefresh) > 60 }
+
+    /// Refresh only if cached data is stale — used on view appear / app activation so switching
+    /// tabs doesn't refetch. Pull-to-refresh bypasses this by calling refresh() directly.
+    func refreshIfStale() async {
+        guard isStale else { return }
+        try? await refresh()
+    }
 
     init(client: NightscoutClient, alarmEngine: AlarmEngine) {
         self.client = client
@@ -140,6 +151,10 @@ final class AppStore: ObservableObject {
 
         if let care = try? await client.fetchCareEvents() {
             await MainActor.run { careEvents = care }
+        }
+
+        if let history = try? await client.fetchDeviceStatusHistory(since: Date().addingTimeInterval(-12 * 3600)) {
+            await MainActor.run { deviceStatusHistory = history }
         }
 
         await MainActor.run {

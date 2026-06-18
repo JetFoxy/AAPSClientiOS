@@ -6,4 +6,5 @@ protocol NsTreatmentWriter {
     func cancelTempTarget() async throws
     func switchProfile(name: String, percentage: Int, durationMin: Int, profileJson: String?) async throws
     func logEvent(eventType: String, at: Date, notes: String?, glucoseMgdl: Int?, durationMin: Int?) async throws
+    func setLoopMode(_ mode: String, durationMin: Int) async throws
 }

@@ -1,0 +1,3 @@
+// Copy this file to Local.xcconfig (gitignored) and fill in your own values.
+// Run `xcodegen generate` after creating/editing it.
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID

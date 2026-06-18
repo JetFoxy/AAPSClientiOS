@@ -76,4 +76,12 @@ final class NsTreatmentWriterTests: XCTestCase {
         XCTAssertEqual(p["glucose"] as? Int, 120)
         XCTAssertEqual(p["units"] as? String, "mg/dl")
     }
+
+    func test_loopModePayload() {
+        let p = NsTreatmentWriterLive.buildLoopMode("OPEN_LOOP", durationMin: 60)
+        XCTAssertEqual(p["eventType"] as? String, "OpenAPS Offline")
+        XCTAssertEqual(p["mode"] as? String, "OPEN_LOOP")
+        XCTAssertEqual(p["duration"] as? Int, 60)
+        XCTAssertEqual(p["app"] as? String, "AAPSClient-iOS")
+    }
 }

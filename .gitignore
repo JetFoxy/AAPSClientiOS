@@ -16,3 +16,13 @@ xcuserdata/
 
 # Misc
 *.log
+
+# Local signing config (contains Apple Team ID) — copy from Config/Local.xcconfig.example
+Config/Local.xcconfig
+ExportOptions.plist
+
+# Personal planning notes, not part of the project docs
+docs/superpowers/
+
+# Internal Claude Code instructions, not for public repo
+CLAUDE.md
