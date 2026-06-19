@@ -82,13 +82,10 @@ JSON-ответы парсятся через `JSONSerialization`, а не `JSON
 современных версиях iOS падает на высокоточных числах с плавающей запятой
 (напр. `82.8000000000001`), которые AAPS/OpenAPS обычно отдают для IOB/COB.
 
-Контракт Nightscout API v3, по которому реализован клиент, описан в
-[`docs/contracts/nightscout-v3-contract.md`](docs/contracts/nightscout-v3-contract.md).
-
 ## Тестирование
 
 Тесты используют fixture-based `NightscoutClient` и mock HTTP transport; JSON-фикстуры лежат
-в `AppTests/Fixtures/` (зеркалируются в `docs/contracts/fixtures/` как референс контракта).
+в `AppTests/Fixtures/`.
 
 ## Локализация
 

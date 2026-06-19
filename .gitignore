@@ -21,8 +21,8 @@ xcuserdata/
 Config/Local.xcconfig
 ExportOptions.plist
 
-# Personal planning notes, not part of the project docs
-docs/superpowers/
+# Internal docs, not part of the public repo
+docs/
 
 # Internal Claude Code instructions, not for public repo
 CLAUDE.md
